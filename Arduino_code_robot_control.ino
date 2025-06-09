@@ -50,7 +50,7 @@ int Red_LED = 4;     // 적색 LED 를 4번 핀에 연결
 int Yellow_LED = 5;  // 노란색 LED를 5번 핀에 연결
 int Green_LED = 6;   // 초록색 LED를 6번 핀에 연결
 
-int number = 3;
+int number = 1;
 String Serial_Data = "";
 
 
@@ -242,11 +242,12 @@ ISR(TIMER2_OVF_vect)
   if(M_cnt > 100){
     M_cnt = 0;
   }
+  
   switch(M_mode){
-    case 0: M(0)break;  // 정지
+    case 0: M(0);break;  // 정지
     case 1: 
     if(M_cnt > 50){
-        M(1) // 저속 전진
+        M(1); // 저속 전진
     }
     else
       M(0);
@@ -255,7 +256,10 @@ ISR(TIMER2_OVF_vect)
     
     case 2:
     if(M_cnt > 50){
-        M(2) // 저속 후진
+        M(2); // 저속 후진
+    }
+    else if(M_cnt < 50 && M_cnt > 40){
+      M(8); // 오른쪽 바퀴만 후진 // 모터 속도 오차범위 제어 
     }
     else
       M(0);
@@ -263,19 +267,27 @@ ISR(TIMER2_OVF_vect)
     break;  
     case 3: 
     if(M_cnt > 50){
-        M(3) // 저속 좌회전
+        M(3); // 저속 좌회전
     }
     else
       M(0);
     break;  
     
     case 4: 
-    if(M_cnt > 50){
-        M(4) // 저속 우회전
+    if(M_cnt > 0 && M_cnt%2 == 0){
+        M(5); // 왼쪽 바퀴만 전진 // 모터 속도 오차범위 제어 
     }
+    else if(M_cnt > 0){
+      M(8); // 오른쪽 바퀴만 후진 // 모터 속도 오차범위 제어 
+    }
+    
     else
       M(0);
-    break;  
+    break; 
+
+    case 5:
+    break;
+     
   }
 
 
@@ -663,35 +675,69 @@ void M(unsigned int i){
     
     /* 전진 */
     case 1 : 
+    L_MOTOR_1_ON;
+    L_MOTOR_2_OFF;
     R_MOTOR_1_ON;
     R_MOTOR_2_OFF;
-    L_MOTOR_1_OFF;
-    L_MOTOR_2_ON;
+
     break;
     
     /* 후진 */
     case 2 : 
     R_MOTOR_1_OFF;
     R_MOTOR_2_ON;
-    L_MOTOR_1_ON;
-    L_MOTOR_2_OFF;
+    L_MOTOR_1_OFF;
+    L_MOTOR_2_ON;
+
     break;
     
     /* 좌회전 */
     case 3 : 
-    L_MOTOR_1_ON;
-    L_MOTOR_2_OFF;
     R_MOTOR_1_ON;
     R_MOTOR_2_OFF;
+    L_MOTOR_1_OFF;
+    L_MOTOR_2_ON;
+    
     break;
     
     /* 우회전 */
     case 4 : 
     R_MOTOR_1_OFF;
     R_MOTOR_2_ON;
+    L_MOTOR_1_ON;
+    L_MOTOR_2_OFF;
+    
+    /* 왼쪽바퀴만 전진 */
+    case 5 : 
+    R_MOTOR_1_OFF;
+    R_MOTOR_2_OFF;
+    L_MOTOR_1_ON;
+    L_MOTOR_2_OFF;
+
+    break;
+    
+    /* 오른쪽바퀴만 전진 */
+    case 6 : 
+    L_MOTOR_1_OFF;
+    L_MOTOR_2_OFF;
+    R_MOTOR_1_ON;
+    R_MOTOR_2_OFF;
+    
+    /* 왼쪽바퀴만 후진 */
+    case 7 : 
+    R_MOTOR_1_OFF;
+    R_MOTOR_2_OFF;
     L_MOTOR_1_OFF;
     L_MOTOR_2_ON;
+
     break;
+    
+    /* 오른쪽바퀴만 후진 */
+    case 8 : 
+    R_MOTOR_1_OFF;
+    R_MOTOR_2_ON;
+    L_MOTOR_1_OFF;
+    L_MOTOR_2_OFF;
   }
 }
 
@@ -734,12 +780,12 @@ void loop()
     Serial.println(Serial_Buffer);
 
     // 문자열 비교 후 number 변경
-    if (strcmp(Serial_Buffer, "forword") == 0)
+    if (strcmp(Serial_Buffer, "forward") == 0)
     {
       number = 96;  // 도트 메트릭스에 전진 화살표 표시
       M_mode = 1;
     }
-    else if (strcmp(Serial_Buffer, "backword") == 0)
+    else if (strcmp(Serial_Buffer, "backward") == 0)
     {
       number = 97; // 도트 메트릭스에 후진 화살표 표시
       M_mode = 2;
@@ -756,7 +802,7 @@ void loop()
     }
     else if (strcmp(Serial_Buffer, "stop") == 0)
     {
-      number = 2; // 도트 메트릭스에 얼굴그림 표시
+      number = 1; // 도트 메트릭스에 얼굴그림 표시
       M_mode = 0;
     }
 
