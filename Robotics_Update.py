@@ -34,7 +34,7 @@ CAMERA_TRIGGER_KEYWORDS = ['사진', '카메라', '찍어', '촬영']
 
 # 아두이노 명령 키워드 (단순 키워드)
 ARDUINO_COMMAND_KEYWORDS = [
-    'M_Sunny', 'M_partly_cloudy', 'M_cloudy', 'M_rainy', 'M_sleet', 'M_snowy',
+    'M_Sunny', 'M_partly_cloudy', 'M_cloudy', 'M_rainy', 'M_sleet', 'M_snowy', 'M_LOVE', 'M_Circle', 'M_Square', 'M_STAR',
     'forward', 'backward', 'turn_left', 'turn_right', 'stop'
      # 움직임 키워드는 이제 TIMED_COMMANDS에서 처리
 ]
@@ -98,12 +98,18 @@ def recognize_speech(prompt=None):
         return ""
 
 def speak_text(text):
-    """텍스트를 음성으로 변환하고 재생합니다."""
+    """텍스트를 음성으로 변환하고 재생합니다. (특수문자 제거 포함)"""
     print("챗봇:", text)
     try:
-        tts = gTTS(text=text, lang='ko')
+        # 1️⃣ 특수문자 제거 (TTS가 발음하지 않아야 하는 문자들)
+        cleaned_text = re.sub(r'[*@^#{}[\]\\|<>`~]', '', text)
+        
+        # 2️⃣ 연속된 공백 정리
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+
+        # 3️⃣ gTTS로 음성 변환 및 재생
+        tts = gTTS(text=cleaned_text, lang='ko')
         tts.save("response.mp3")
-        # mpg321을 사용하여 재생 (에러 메시지 숨김) 및 파일 삭제
         os.system("mpg321 -q response.mp3 > /dev/null 2>&1")
         os.remove("response.mp3")
     except Exception as e:
@@ -163,18 +169,24 @@ def build_prompt(history):
     
     # 모델의 역할 정의 (Gemini 챗봇한테 시간 명령을 출력하도록 명시) 
     system_instruction = (
-        "당신은 라즈베리 파이 기반의 로봇 제어 챗봇입니다. "
+        "당신은 라즈베리 파이 기반의 로봇 제어 챗봇입니다. 라즈베리파이로 AI기능을 수행하며 아두이노와 연결하여 시리얼 통신으로 모터와 도트메트릭스를 제어합니다."
         "모든 응답은 한국어로 친절하게 작성합니다. "
         "로봇의 움직임에 대한 요청(예: '앞으로 가', '뒤로 3초간 가')을 받으면, "
         "답변의 **가장 마지막 줄에** 파이썬 스크립트가 파싱할 수 있도록 정확한 명령어를 다음 형식으로 출력합니다. "
         
         "**[중요 규칙]**: "
         "1. **시간 기반 움직임 요청**: 사용자가 '5초 앞으로'처럼 시간과 움직임을 요청하면, 명령어와 시간을 띄어쓰기로 구분하여 마지막 줄에 출력하세요. (예: 'forward 5' 또는 'backward 3'). "
-        "2. **단순 이동 요청**: '앞으로 가'와 같이 시간 없이 단순 이동만 요청하면, 'forward 1'처럼 기본 시간(1초)을 적용하여 출력하세요. "
+        "2. **단순 이동 요청**: '앞으로 조금만 가'와 같이 시간 없이 단순 이동만 요청하면, 'forward 1', ''처럼 기본 시간(1초)을 적용하여 출력하세요. "
         "3. **날씨 명령 요청**: 날씨 관련 요청을 받으면 답변의 맨 마지막 줄에 날씨 명령어만 출력하세요. (예: M_Sunny). "
-        "4. **다른 모든 명령**: 다른 모든 단순 명령(예: turn_left)은 응답의 맨 마지막 줄에 해당 명령어를 출력하세요. "
+        "4. **다른 모든 명령**: 다른 모든 단순 명령(예: forward) (예: backward) (예: turn_left) (예: turn_right)은 응답의 맨 마지막 줄에 해당 명령어를 출력하세요. "
         "5. **출력 예시**: "
         "   - '네, 5초 동안 앞으로 움직일게요.' \n   **forward 5**"
+        "6. **사랑 모드 명령 ** : '사랑해' 또는 '화면에 하트 띄워줘' 라는 명령을 받으면 맨 마지막줄에 'M_LOVE' 명령어를 출력하세요"        
+        "7. **별 모드 명령 ** : '재밌다' 또는 '화면에 별 띄워줘' 라는 명령을 받으면 맨 마지막줄에 'M_STAR' 명령어를 출력하세요"        
+        "8. **네모 모드 명령 ** : '화면에 사각형 띄워줘' 또는 '화면에 네모 띄워줘' 라는 명령을 받으면 맨 마지막줄에 'M_Square' 명령어를 출력하세요"        
+        "9. **동그라미 모드 명령 ** : '화면에 원 띄워줘' 또는 '화면에 동그라미 띄워줘' 라는 명령을 받으면 맨 마지막줄에 'M_Circle' 명령어를 출력하세요"        
+        "10. **케릭터 얼굴 모드 명령 ** : '화면에 너의 얼굴 띄워줘' 또는 '화면에 케릭터 띄워줘' 라는 명령을 받으면 맨 마지막줄에 'stop' 명령어를 출력하세요"        
+        
     )
     
     return system_instruction + "\n" + prompt
@@ -318,7 +330,7 @@ def chat_bot():
             if not question:
                 continue
 
-            if "종료" in question or "그만" in question:
+            if "프로그램 종료" in question or "프로그램 종료해" in question:
                 speak_text("대화를 종료합니다. 안녕히 계세요!")
                 break
             
@@ -331,3 +343,7 @@ if __name__ == "__main__":
         chat_bot()
     finally:
         print("챗봇 프로그램을 종료합니다.")
+
+
+
+# 위 코드에서 gemini 한테 받은 문자를 TTS로 말할 때 '* , @ , ^' 같은 특수문자를 말하지 않게 해줘 
